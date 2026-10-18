@@ -18,6 +18,142 @@ In public procurement and government tender evaluation (such as India's **GeM Po
 
 ---
 
+## 📊 System Architecture & Multi-Agent Pipeline
+
+```mermaid
+flowchart TD
+    subgraph INGESTION["1. Ingestion Layer"]
+        RFP["Tender RFP (GEM/2026/B/48213)"]
+        PACKET["Vendor Annexures (GST, PAN, Udyam, OEM MAF)"]
+    end
+
+    subgraph SWARM["2. Autonomous Multi-Agent Swarm (FastAPI Backend)"]
+        A1["Tender Agent\nExtracts RFP Section 4.2 Rules"]
+        A2["Document Agent\nMultimodal Layout OCR"]
+        A3["Verification Agent\nDeterministic Math & String Slicing"]
+        A4["Evidence Agent\nPins Bounding Boxes & Clauses"]
+        A5["Report Agent\nSynthesizes Risk Verdict"]
+        
+        RFP --> A1
+        PACKET --> A2
+        A1 & A2 --> A3
+        A3 --> A4
+        A4 --> A5
+    end
+
+    subgraph TRIAGE["3. Human-in-the-Loop 3-Lane Triage"]
+        L1["Lane 1: Auto-Approved (>90% Conf)\nGST Active, PAN 100% Substring"]
+        L2["Lane 2: Officer Review Queue (70-85% Conf)\nUdyam Shri vs Shree 78% Match"]
+        L3["Lane 3: Policy Disqualification Flag\nOEM Expired -655 Days on Tender Date"]
+        
+        A5 --> L1
+        A5 --> L2
+        A5 --> L3
+    end
+
+    subgraph CLARIFICATION["4. AI Clarification & 12h SLA Voice Escalation"]
+        CLAR_AGENT["Clarification Agent\nLLM-Drafted Legal Inquiries"]
+        OFFICER["Procurement Officer\n1-Click Notice Approval"]
+        VENDOR["Vendor (Bidder) Portal\nM/s Shree Infotech"]
+        VOICE["Autonomous Voice Agent\nTriggered if Unresponsive >12h"]
+        RENEWAL["Vendor Uploads Renewed\nOEM Extension (Valid 2027)"]
+        DOSSIER["Final Compliance Dossier\nTamper-Evident Audit Trail"]
+
+        L3 --> CLAR_AGENT
+        CLAR_AGENT --> OFFICER
+        OFFICER -->|Transmits via GeM| VENDOR
+        VENDOR -.->|No response > 12h| VOICE
+        VOICE -->|Automated Outbound Phone Call| VENDOR
+        VENDOR -->|Submits Response| RENEWAL
+        RENEWAL -->|Status: Requires Review| OFFICER
+        L1 & L2 & RENEWAL --> DOSSIER
+    end
+
+    classDef primary fill:#2563EB,stroke:#1E40AF,stroke-width:2px,color:#fff;
+    classDef success fill:#059669,stroke:#047857,stroke-width:2px,color:#fff;
+    classDef warning fill:#D97706,stroke:#B45309,stroke-width:2px,color:#fff;
+    classDef danger fill:#DC2626,stroke:#B91C1C,stroke-width:2px,color:#fff;
+    classDef agent fill:#071B49,stroke:#2563EB,stroke-width:2px,color:#fff;
+
+    class A1,A2,A3,A4,A5,CLAR_AGENT,VOICE agent;
+    class L1 success;
+    class L2 warning;
+    class L3 danger;
+```
+
+---
+
+## ⏱️ 12-Hour SLA Voice Escalation Sequence
+
+When a clarification notice is sent to an unresponsive bidder, TenderLens triggers an autonomous outbound phone call directly to the bidder's registered director:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Officer as Procurement Officer
+    participant System as TenderLens AI Swarm
+    participant Backend as FastAPI Backend (:8000)
+    participant Voice as Autonomous Voice Agent
+    actor Vendor as Bidder (Rajesh Sharma)
+
+    Officer->>System: Uploads RFP & Vendor Packet
+    System->>Backend: POST /api/screen/autonomous
+    Backend->>System: 5 Agents Execute (OEM Expired -655 days detected)
+    System->>Officer: Displays Disqualification Flag & Drafts Legal Letter
+    Officer->>Backend: Approves Notice (CLAR-OEM)
+    Backend->>Vendor: Notice Transmitted to Vendor Portal
+    
+    Note over Vendor,Voice: 12 Hours Elapsed without Vendor Acknowledgment
+    Backend->>Voice: Triggers 12h SLA Escalation Rule
+    Voice->>Vendor: Automated Voice Call to +91 98201 44821
+    Voice-->>Vendor: "OEM Letter expired. Disqualification executes in 12h."
+    Vendor-->>Voice: "Understood. Uploading renewed Dell 2027 extension now."
+    Voice->>Backend: POST /api/outreach/call (Disposition: Acknowledged)
+    
+    Vendor->>Backend: Uploads Dell_Technologies_OEM_Extension_2026_2027.pdf
+    Backend->>Officer: OEM Status Auto-Upgraded to "Requires Review"
+    Officer->>System: Verifies Extension & Generates Final Audit Dossier
+```
+
+---
+
+## 🔍 Cross-Document Identity Verification Matrix
+
+How TenderLens reconciles entities across documents using deterministic math and fuzzy scoring:
+
+```mermaid
+graph LR
+    subgraph VENDOR_PACKET["Vendor Document Packet"]
+        GST["GST Certificate\nGSTIN: 27AABCS1234F1Z5"]
+        PAN["PAN Card\nPAN: AABCS1234F"]
+        UDYAM["Udyam MSME Certificate\nUDYAM-MH-19-0012345"]
+        OEM["Dell MAF Authorization\nValidity: 31 Dec 2024"]
+    end
+
+    subgraph RULES["Deterministic & Fuzzy Verification Rules"]
+        R_PAN["Substring Alignment Rule\nChars 3-12 of GSTIN == PAN"]
+        R_STATE["State Match Rule\nFirst 2 chars == 27 (Maharashtra)"]
+        R_CONST["Constitution Match Rule\n4th char 'C' == Company"]
+        R_FUZZY["Levenshtein Fuzzy Match\n'Shri' vs 'Shree' = 78.4%"]
+        R_DATE["Date Delta Arithmetic\n31 Dec 2024 - 17 Oct 2026 = -655 days"]
+    end
+
+    subgraph VERDICTS["Triage Decisions"]
+        V_GST["🟢 Compliant (98%)"]
+        V_PAN["🟢 Compliant (96%)"]
+        V_UDYAM["🟡 Routed to Officer Review (79%)"]
+        V_OEM["🔴 Non-Compliant / Flagged (94%)"]
+    end
+
+    GST --> R_STATE --> V_GST
+    GST & PAN --> R_PAN --> V_PAN
+    PAN --> R_CONST --> V_PAN
+    GST & UDYAM --> R_FUZZY --> V_UDYAM
+    OEM --> R_DATE --> V_OEM
+```
+
+---
+
 ## 🚀 Key Features
 
 ### 1. Autonomous Multi-Agent Verification Swarm
